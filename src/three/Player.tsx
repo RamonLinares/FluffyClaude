@@ -51,10 +51,22 @@ export function Player({
     [],
   );
 
-  // dev-only: expose the camera for automated checks
+  // dev-only: expose the camera + a surface teleport for automated checks
   useEffect(() => {
-    if (import.meta.env.DEV)
-      (window as unknown as { fluffyCam: THREE.Camera }).fluffyCam = camera;
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as {
+      fluffyCam: THREE.Camera;
+      fluffyTeleport: (x: number, y: number, z: number) => void;
+    };
+    w.fluffyCam = camera;
+    w.fluffyTeleport = (x, y, z) => {
+      ballDir.current.set(x, y, z).normalize();
+      heading.current
+        .set(0, 0, 1)
+        .addScaledVector(ballDir.current, -ballDir.current.z)
+        .normalize();
+      if (heading.current.lengthSq() < 0.01) heading.current.set(1, 0, 0);
+    };
   }, [camera]);
 
   // Desktop: drag the canvas to orbit the camera.
