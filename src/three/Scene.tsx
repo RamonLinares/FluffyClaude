@@ -4,6 +4,9 @@ import { Sun } from "./Sun";
 import { PlanetMesh } from "./PlanetMesh";
 import { Atmosphere } from "./Atmosphere";
 import { Decorations } from "./Decorations";
+import { Landmarks } from "./Landmarks";
+import { FloatingIslets } from "./FloatingIslets";
+import { Clouds } from "./Clouds";
 import { Particles } from "./Particles";
 import { Collectibles } from "./Collectibles";
 import { Pops } from "./Pops";
@@ -24,9 +27,12 @@ export function Scene({ quality }: { quality: "low" | "high" }) {
       {/* Everything tied to a planet remounts (and disposes GPU resources) on travel. */}
       <group key={planet.index}>
         <SkyDome theme={planet.theme} />
+        <Clouds theme={planet.theme} quality={quality} />
         <PlanetMesh planet={planet} detail={quality === "high" ? 28 : 20} />
         <Atmosphere planet={planet} />
         <Decorations planet={planet} quality={quality} />
+        <Landmarks planet={planet} />
+        <FloatingIslets planet={planet} />
         <Particles planet={planet} count={quality === "high" ? 280 : 140} />
         <Collectibles />
       </group>
