@@ -114,6 +114,12 @@ export interface PlanetTheme {
   moons: MoonConfig[];
   space: boolean; // deep-space sky + starfield
   starColor: string;
+
+  // Atmospheric flourishes
+  aurora: boolean;
+  auroraColor: string;
+  auroraColor2: string;
+  hasComets: boolean;
 }
 
 const ADJECTIVES = [
@@ -509,6 +515,22 @@ export function makePlanetTheme(index: number, baseSeed: number): PlanetTheme {
 
   const hasSea = rng.chance(biome.seaChance);
 
+  // Atmospheric flourishes (drawn last so earlier worlds keep their identity).
+  const auroraBase =
+    biome.id === "Tundra"
+      ? 0.75
+      : biome.id === "Machina"
+        ? 0.65
+        : space
+          ? 0.55
+          : biome.id === "Lavender"
+            ? 0.4
+            : 0.12;
+  const aurora = rng.chance(auroraBase);
+  const auroraColor = hslToHex(accH + jit(20), 0.75, 0.62);
+  const auroraColor2 = hslToHex(skyH + 130 + jit(40), 0.72, 0.62);
+  const hasComets = space ? true : rng.chance(0.25);
+
   return {
     index,
     seed,
@@ -552,5 +574,9 @@ export function makePlanetTheme(index: number, baseSeed: number): PlanetTheme {
     moons,
     space,
     starColor: hslToHex(skyH + 30, 0.3, 0.95),
+    aurora,
+    auroraColor,
+    auroraColor2,
+    hasComets,
   };
 }

@@ -11,6 +11,8 @@ import { Clouds } from "./Clouds";
 import { Rings } from "./Rings";
 import { Moons } from "./Moons";
 import { Starfield } from "./Starfield";
+import { Aurora } from "./Aurora";
+import { Comets } from "./Comets";
 import { Particles } from "./Particles";
 import { Collectibles } from "./Collectibles";
 import { Pops } from "./Pops";
@@ -35,6 +37,10 @@ export function Scene({ quality }: { quality: "low" | "high" }) {
         <Suns suns={th.suns} />
         {th.space && (
           <Starfield seed={th.seed} color={th.starColor} count={quality === "high" ? 700 : 380} />
+        )}
+        {th.aurora && <Aurora color={th.auroraColor} color2={th.auroraColor2} />}
+        {th.hasComets && (
+          <Comets seed={th.seed} color={th.starColor} count={quality === "high" ? 3 : 2} />
         )}
         {!th.space && <Clouds theme={th} quality={quality} />}
         <PlanetMesh planet={planet} detail={quality === "high" ? 28 : 20} />
