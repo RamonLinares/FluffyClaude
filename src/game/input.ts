@@ -36,15 +36,21 @@ let initialized = false;
 export function initKeyboard() {
   if (initialized) return;
   initialized = true;
+  const isTyping = () => {
+    const a = document.activeElement as HTMLElement | null;
+    return (
+      !!a &&
+      (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)
+    );
+  };
   const down = (e: KeyboardEvent) => {
+    // While typing (e.g. entering a travel code, which can contain the letters
+    // W/A/S/D), let the field handle every key — never preventDefault or steer
+    // the ball, or the typed character would be swallowed.
+    if (isTyping()) return;
     if (e.code === "Space") {
-      // ignore while typing (e.g. entering a travel code)
-      const a = document.activeElement;
-      const typing = a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA");
-      if (!typing) {
-        inputState.jumpQueued = true;
-        e.preventDefault();
-      }
+      inputState.jumpQueued = true;
+      e.preventDefault();
       return;
     }
     if (
