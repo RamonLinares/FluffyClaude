@@ -128,6 +128,45 @@ function mushroomCap(): THREE.BufferGeometry {
   return new THREE.SphereGeometry(0.28, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
 }
 
+// A drooping crown of palm fronds, baked into one geometry.
+function palmCrown(): THREE.BufferGeometry {
+  const fronds: THREE.BufferGeometry[] = [];
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const f = new THREE.ConeGeometry(0.12, 0.95, 4);
+    f.translate(0, 0.47, 0); // base at origin
+    f.rotateZ(-Math.PI / 2 + 0.5); // point outward & droop down
+    f.rotateY((i / n) * Math.PI * 2);
+    fronds.push(f);
+  }
+  return mergeGeometries(fronds, false) ?? fronds[0];
+}
+
+// A chunky cog: a hub disc ringed with rectangular teeth.
+function gear(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const hub = new THREE.CylinderGeometry(0.34, 0.34, 0.16, 16);
+  hub.rotateX(Math.PI / 2); // lay flat-ish facing camera
+  parts.push(hub);
+  const teeth = 8;
+  for (let i = 0; i < teeth; i++) {
+    const t = new THREE.BoxGeometry(0.13, 0.13, 0.18);
+    const a = (i / teeth) * Math.PI * 2;
+    t.translate(Math.cos(a) * 0.42, Math.sin(a) * 0.42, 0);
+    t.rotateZ(a);
+    parts.push(t);
+  }
+  return mergeGeometries(parts, false) ?? hub;
+}
+
+// A shallow crater rim ring lying flat on the ground.
+function crater(): THREE.BufferGeometry {
+  const g = new THREE.TorusGeometry(0.55, 0.16, 5, 14);
+  g.rotateX(Math.PI / 2);
+  g.scale(1, 0.35, 1);
+  return g;
+}
+
 // ---------------------------------------------------------------------------
 
 export function Decorations({
@@ -167,6 +206,24 @@ export function Decorations({
       spireGeo: new THREE.ConeGeometry(0.18, 1.7, 5),
       stemGeo: new THREE.CylinderGeometry(0.07, 0.1, 0.4, 6),
       reedGeo: new THREE.ConeGeometry(0.05, 0.9, 4),
+      // forest tree: trunk + two foliage blobs
+      trunkGeo: new THREE.CylinderGeometry(0.12, 0.17, 1.0, 6),
+      foliageGeo: new THREE.IcosahedronGeometry(0.62, 0),
+      foliageTopGeo: new THREE.IcosahedronGeometry(0.42, 0),
+      // palm: tall trunk + frond crown
+      palmTrunk: new THREE.CylinderGeometry(0.1, 0.14, 1.4, 6),
+      palmCrownGeo: palmCrown(),
+      // house: body + pyramid roof
+      houseBody: new THREE.BoxGeometry(0.8, 0.7, 0.8),
+      houseRoof: new THREE.ConeGeometry(0.66, 0.5, 4),
+      // street lamp: post + glowing orb
+      lampPost: new THREE.CylinderGeometry(0.05, 0.06, 0.9, 6),
+      lampOrb: new THREE.IcosahedronGeometry(0.15, 0),
+      // machine props
+      gearGeo: gear(),
+      panelBase: new THREE.BoxGeometry(0.4, 0.3, 0.4),
+      panelFace: new THREE.BoxGeometry(0.78, 0.78, 0.07),
+      craterGeo: crater(),
     };
   }, [th.seed]);
 
@@ -498,6 +555,178 @@ export function Decorations({
                 flatShading: true,
               })
             }
+          />,
+        );
+        break;
+      case "trees":
+        nodes.push(
+          <InstancedProp
+            key="tree-trunk"
+            points={pts}
+            seed={1010}
+            scaleMin={0.8}
+            scaleMax={1.6}
+            baseLift={0.5}
+            sink={0.1}
+            geometry={assets.trunkGeo}
+            material={new THREE.MeshStandardMaterial({ color: "#9a6f49", roughness: 1, flatShading: true })}
+          />,
+          <InstancedProp
+            key="tree-foliage"
+            points={pts}
+            seed={1010}
+            scaleMin={0.8}
+            scaleMax={1.6}
+            baseLift={1.15}
+            lean={0.08}
+            geometry={assets.foliageGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.terrainHigh, roughness: 0.95, flatShading: true })}
+          />,
+          <InstancedProp
+            key="tree-foliage-top"
+            points={pts}
+            seed={1011}
+            scaleMin={0.8}
+            scaleMax={1.6}
+            baseLift={1.6}
+            geometry={assets.foliageTopGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.terrainPeak, roughness: 0.95, flatShading: true })}
+          />,
+        );
+        break;
+      case "palms":
+        nodes.push(
+          <InstancedProp
+            key="palm-trunk"
+            points={pts}
+            seed={1212}
+            scaleMin={0.8}
+            scaleMax={1.5}
+            baseLift={0.7}
+            sink={0.1}
+            lean={0.2}
+            geometry={assets.palmTrunk}
+            material={new THREE.MeshStandardMaterial({ color: "#b98a5e", roughness: 1, flatShading: true })}
+          />,
+          <InstancedProp
+            key="palm-crown"
+            points={pts}
+            seed={1212}
+            scaleMin={0.8}
+            scaleMax={1.5}
+            baseLift={1.4}
+            lean={0.2}
+            geometry={assets.palmCrownGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.terrainHigh, roughness: 0.9, flatShading: true })}
+          />,
+        );
+        break;
+      case "houses":
+        nodes.push(
+          <InstancedProp
+            key="house-body"
+            points={pts}
+            seed={1313}
+            scaleMin={0.8}
+            scaleMax={1.6}
+            baseLift={0.35}
+            sink={0.08}
+            geometry={assets.houseBody}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.85, flatShading: true })}
+          />,
+          <InstancedProp
+            key="house-roof"
+            points={pts}
+            seed={1313}
+            scaleMin={0.8}
+            scaleMax={1.6}
+            baseLift={0.95}
+            geometry={assets.houseRoof}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.8, flatShading: true })}
+          />,
+        );
+        break;
+      case "lamps":
+        nodes.push(
+          <InstancedProp
+            key="lamp-post"
+            points={pts}
+            seed={1414}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.45}
+            sink={0.05}
+            geometry={assets.lampPost}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.7, metalness: 0.3, flatShading: true })}
+          />,
+          <InstancedProp
+            key="lamp-orb"
+            points={pts}
+            seed={1414}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.95}
+            cast={false}
+            geometry={assets.lampOrb}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, emissive: th.accent, emissiveIntensity: 1.3, roughness: 0.4 })}
+          />,
+        );
+        break;
+      case "gears":
+        nodes.push(
+          <InstancedProp
+            key="gears"
+            points={pts}
+            seed={1515}
+            scaleMin={0.7}
+            scaleMax={1.8}
+            baseLift={0.5}
+            sink={0.15}
+            lean={0.5}
+            geometry={assets.gearGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, emissive: th.accent, emissiveIntensity: 0.15, roughness: 0.5, metalness: 0.6, flatShading: true })}
+          />,
+        );
+        break;
+      case "panels":
+        nodes.push(
+          <InstancedProp
+            key="panel-base"
+            points={pts}
+            seed={1616}
+            scaleMin={0.8}
+            scaleMax={1.7}
+            baseLift={0.2}
+            sink={0.05}
+            geometry={assets.panelBase}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.6, metalness: 0.5, flatShading: true })}
+          />,
+          <InstancedProp
+            key="panel-face"
+            points={pts}
+            seed={1616}
+            scaleMin={0.8}
+            scaleMax={1.7}
+            baseLift={0.7}
+            lean={0.12}
+            geometry={assets.panelFace}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, emissive: th.accent, emissiveIntensity: 0.8, roughness: 0.4, metalness: 0.2 })}
+          />,
+        );
+        break;
+      case "craters":
+        nodes.push(
+          <InstancedProp
+            key="craters"
+            points={pts}
+            seed={1717}
+            scaleMin={0.8}
+            scaleMax={2.4}
+            baseLift={0.0}
+            sink={0.12}
+            cast={false}
+            geometry={assets.craterGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.rockColor, roughness: 1, flatShading: true })}
           />,
         );
         break;

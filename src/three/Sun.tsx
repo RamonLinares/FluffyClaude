@@ -38,15 +38,31 @@ export function Sun({
   });
 
   const mapSize = quality === "high" ? 2048 : 1024;
+  const secondStar = theme.suns[1];
 
   return (
     <>
       <hemisphereLight
         color={new THREE.Color(theme.skyHorizon)}
         groundColor={new THREE.Color(theme.terrainMid)}
-        intensity={0.85}
+        intensity={theme.space ? 0.5 : 0.85}
       />
-      <ambientLight color={new THREE.Color(theme.ambientColor)} intensity={0.35} />
+      <ambientLight
+        color={new THREE.Color(theme.ambientColor)}
+        intensity={theme.space ? 0.22 : 0.35}
+      />
+      {/* second star of a double-star system: a fixed-direction fill light */}
+      {secondStar && (
+        <directionalLight
+          color={new THREE.Color(secondStar.color)}
+          intensity={secondStar.intensity}
+          position={[
+            secondStar.dir[0] * 30,
+            secondStar.dir[1] * 30,
+            secondStar.dir[2] * 30,
+          ]}
+        />
+      )}
       <directionalLight
         ref={lightRef}
         color={new THREE.Color(theme.sunColor)}
