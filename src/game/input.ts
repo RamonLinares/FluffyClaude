@@ -1,11 +1,11 @@
 import * as THREE from "three";
 
-// Shared, mutable input state. The touch joystick writes `joy`; the keyboard
-// writes `move`; the controller reads whichever is active each frame.
+// Shared, mutable input state. Touch/pen presses write `pressMove`; the
+// keyboard writes `move`; the controller reads whichever is active each frame.
 export const inputState = {
   move: new THREE.Vector2(0, 0), // keyboard, range -1..1 (x=right, y=forward)
-  joy: new THREE.Vector2(0, 0), // touch joystick, range -1..1
-  joyActive: false,
+  pressMove: new THREE.Vector2(0, 0), // screen press, range -1..1
+  pressMoveActive: false,
   yaw: 0, // camera orbit offset (radians), driven by drag
   jumpQueued: false, // set by Space / double-tap, consumed by the controller
 };
@@ -83,9 +83,9 @@ if (import.meta.env.DEV) {
   (window as unknown as { fluffyInput: typeof inputState }).fluffyInput = inputState;
 }
 
-/** The active desired move vector (joystick wins when touched). */
+/** The active desired move vector (screen press wins while touched). */
 export function getMove(out: THREE.Vector2): THREE.Vector2 {
-  if (inputState.joyActive) out.copy(inputState.joy);
+  if (inputState.pressMoveActive) out.copy(inputState.pressMove);
   else out.copy(inputState.move);
   if (out.lengthSq() > 1) out.normalize();
   return out;

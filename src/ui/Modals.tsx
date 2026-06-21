@@ -168,11 +168,12 @@ export function HelpModal() {
         <p className="lead">A calm little game. There's no way to lose — just explore.</p>
         <ul style={{ lineHeight: 1.7, paddingLeft: 18, color: "var(--ink)" }}>
           <li>
-            <b>Move:</b> drag the left side of the screen, or use{" "}
+            <b>Move:</b> hold the screen in the direction you want to roll, or use{" "}
             <b>WASD / arrow keys</b>.
           </li>
           <li>
-            <b>Look around:</b> drag the rest of the screen (or mouse).
+            <b>Look around:</b> drag with the mouse on desktop; mobile camera
+            follows automatically.
           </li>
           <li>
             <b>Jump:</b> press <b>space</b>, or <b>double-tap</b> the screen.

@@ -57,16 +57,38 @@ export function Player({
       (window as unknown as { fluffyCam: THREE.Camera }).fluffyCam = camera;
   }, [camera]);
 
-  // camera orbit by dragging the 3D view (canvas only; HUD/joystick sit above it)
-  // plus double-tap / double-click anywhere on the view to jump.
+  // Desktop: drag the canvas to orbit the camera.
+  // Touch/pen: hold a screen position to roll in that screen-relative direction.
+  // Double-tap / double-click anywhere on the view to jump.
   useEffect(() => {
     const el = gl.domElement;
-    let dragging = false;
+    let lookPointerId: number | null = null;
+    let movePointerId: number | null = null;
     let lastX = 0;
     let lastTap = 0;
+    const isScreenMovePointer = (e: PointerEvent) =>
+      e.pointerType === "touch" || e.pointerType === "pen";
+    const updatePressMove = (e: PointerEvent) => {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const halfW = Math.max(rect.width / 2, 1);
+      const halfH = Math.max(rect.height / 2, 1);
+      const dx = e.clientX - centerX;
+      const dy = centerY - e.clientY;
+      const deadZone = Math.min(42, Math.max(18, Math.min(rect.width, rect.height) * 0.045));
+      if (Math.hypot(dx, dy) < deadZone) {
+        inputState.pressMove.set(0, 0);
+        return;
+      }
+      inputState.pressMove.set(dx / halfW, dy / halfH);
+      if (inputState.pressMove.lengthSq() > 1) inputState.pressMove.normalize();
+    };
+    const stopPressMove = () => {
+      inputState.pressMove.set(0, 0);
+      inputState.pressMoveActive = false;
+    };
     const down = (e: PointerEvent) => {
-      dragging = true;
-      lastX = e.clientX;
       const now = performance.now();
       if (now - lastTap < 320) {
         inputState.jumpQueued = true;
@@ -74,28 +96,80 @@ export function Player({
       } else {
         lastTap = now;
       }
+      if (isScreenMovePointer(e)) {
+        movePointerId = e.pointerId;
+        inputState.pressMoveActive = true;
+        updatePressMove(e);
+        el.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        return;
+      }
+      lookPointerId = e.pointerId;
+      lastX = e.clientX;
+      el.setPointerCapture(e.pointerId);
     };
     const move = (e: PointerEvent) => {
-      if (!dragging) return;
+      if (movePointerId === e.pointerId) {
+        updatePressMove(e);
+        e.preventDefault();
+        return;
+      }
+      if (lookPointerId !== e.pointerId) return;
       const dx = e.clientX - lastX;
       lastX = e.clientX;
       inputState.yaw -= dx * 0.006;
     };
-    const up = () => {
-      dragging = false;
+    const up = (e: PointerEvent) => {
+      if (movePointerId === e.pointerId) {
+        movePointerId = null;
+        stopPressMove();
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        return;
+      }
+      if (lookPointerId === e.pointerId) {
+        lookPointerId = null;
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      }
     };
     el.addEventListener("pointerdown", down);
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("lostpointercapture", up);
     return () => {
       el.removeEventListener("pointerdown", down);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      el.removeEventListener("lostpointercapture", up);
+      stopPressMove();
     };
   }, [gl]);
 
-  const camDist = quality === "high" ? 6.3 : 7.0;
-  const camHeight = 3.6;
+  // Base follow distance. On narrow / portrait screens (phones) the vertical FOV
+  // means the ball eats the whole frame, so we pull the camera back — and lift it
+  // a little — the narrower the viewport gets. Recomputed on resize/orientation.
+  const baseDist = quality === "high" ? 6.3 : 7.0;
+  const baseHeight = 3.6;
+  const camDist = useRef(baseDist);
+  const camHeight = useRef(baseHeight);
+
+  useEffect(() => {
+    const recompute = () => {
+      const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+      // aspect ~1.6 (desktop) -> portrait 0; aspect ~0.46 (tall phone) -> portrait 1
+      const portrait = THREE.MathUtils.clamp((1.6 - aspect) / 1.14, 0, 1);
+      camDist.current = baseDist * (1 + portrait * 0.85);
+      camHeight.current = baseHeight * (1 + portrait * 0.4);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    window.addEventListener("orientationchange", recompute);
+    return () => {
+      window.removeEventListener("resize", recompute);
+      window.removeEventListener("orientationchange", recompute);
+    };
+  }, [baseDist, baseHeight]);
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -215,8 +289,8 @@ export function Player({
     // follow camera
     s.camWanted
       .copy(s.worldPos)
-      .addScaledVector(s.up, camHeight)
-      .addScaledVector(s.camDir, -camDist);
+      .addScaledVector(s.up, camHeight.current)
+      .addScaledVector(s.camDir, -camDist.current);
     camera.up.copy(s.up);
     camera.position.lerp(s.camWanted, moving ? 0.08 : 0.04);
     s.lookAt.copy(s.worldPos).addScaledVector(s.up, 0.6);

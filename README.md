@@ -33,7 +33,7 @@ Coded with Claude Code and Opus 4.8 high.
 
 | | Move | Look |
 |---|---|---|
-| **Mobile** | drag the left side of the screen | drag the right side |
+| **Mobile** | hold the screen in the direction you want to roll | automatic camera |
 | **Desktop** | `WASD` / arrow keys | drag with the mouse |
 
 ## Run
@@ -56,7 +56,7 @@ src/
                # storage (localStorage), shareCode (travel codes), audio, input
   three/       # r3f scene: Planet, Atmosphere, Sky, Sun, Fluffball, Player
                # (controller), Decorations, Collectibles, Pops, Particles, Effects
-  ui/          # React DOM overlays: Hud, Joystick, StartScreen, Modals, Feedback
+  ui/          # React DOM overlays: Hud, StartScreen, Modals, Feedback
 ```
 
 Planet `N` is identical on every device (a fixed `WORLD_SEED`), which is why a

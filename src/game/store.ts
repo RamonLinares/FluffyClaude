@@ -14,6 +14,7 @@ import {
   snapshotProgress,
 } from "./storage";
 import { audio } from "./audio";
+import { inputState } from "./input";
 
 export type Phase = "start" | "playing" | "transition";
 
@@ -249,5 +250,45 @@ export const store = new GameStore();
 
 // Dev-only hook for debugging / automated checks.
 if (import.meta.env.DEV) {
-  (window as unknown as { fluffyStore: GameStore }).fluffyStore = store;
+  const round = (n: number) => Number(n.toFixed(3));
+  const vec2 = (v: THREE.Vector2) => ({ x: round(v.x), y: round(v.y) });
+  const vec3 = (v: THREE.Vector3) => ({
+    x: round(v.x),
+    y: round(v.y),
+    z: round(v.z),
+  });
+  const debugWindow = window as unknown as {
+    fluffyStore: GameStore;
+    render_game_to_text: () => string;
+  };
+  debugWindow.fluffyStore = store;
+  debugWindow.render_game_to_text = () => {
+    const activeQuest =
+      store.quests.find((q) => q.id === store.activeQuestId) ?? store.quests[0];
+    return JSON.stringify({
+      note: "Coordinates are world space with origin at the planet center; input x is screen-right and y is screen-forward.",
+      phase: store.phase,
+      planet: {
+        index: store.planet.index,
+        name: store.planet.theme.name,
+      },
+      player: {
+        position: vec3(store.playerPos),
+      },
+      input: {
+        keyboard: vec2(inputState.move),
+        pressMove: vec2(inputState.pressMove),
+        pressMoveActive: inputState.pressMoveActive,
+        yaw: round(inputState.yaw),
+      },
+      activeQuest: activeQuest
+        ? {
+            id: activeQuest.id,
+            title: activeQuest.title,
+            collected: activeQuest.collected,
+            total: activeQuest.total,
+          }
+        : null,
+    });
+  };
 }

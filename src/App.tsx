@@ -5,7 +5,6 @@ import { Scene } from "./three/Scene";
 import { useGame, detectQuality } from "./game/useGame";
 import { initKeyboard } from "./game/input";
 import { Hud } from "./ui/Hud";
-import { Joystick } from "./ui/Joystick";
 import { StartScreen } from "./ui/StartScreen";
 import { MenuModal, HelpModal } from "./ui/Modals";
 import { Toast, Transition } from "./ui/Feedback";
@@ -53,7 +52,6 @@ export default function App() {
         {g.phase !== "start" && (
           <>
             <Hud />
-            <Joystick />
           </>
         )}
       </div>

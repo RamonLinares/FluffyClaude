@@ -32,7 +32,7 @@ export function StartScreen() {
 
         <div className="controls-hint">
           <span>
-            <b>Mobile:</b> drag to roll · double-tap to jump
+            <b>Mobile:</b> hold a screen direction to roll · double-tap to jump
           </span>
           <span>
             <b>Desktop:</b> WASD / arrows · drag to look · space to jump
