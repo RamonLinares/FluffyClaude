@@ -24,7 +24,14 @@ export type DecoKind =
   | "lamps"
   | "gears"
   | "panels"
-  | "craters";
+  | "craters"
+  | "robots"
+  | "antennas"
+  | "cairns"
+  | "shells"
+  | "buoys"
+  | "glowmush"
+  | "stalls";
 
 export interface DecoLayer {
   kind: DecoKind;
@@ -319,7 +326,7 @@ const BIOMES: BiomeDef[] = [
     flowerHues: [55, 0, 280, 320],
     layers: [
       { kind: "trees", density: 1.5 }, { kind: "tufts", density: 1.4 },
-      { kind: "flowers", density: 0.9 }, { kind: "mushrooms", density: 0.5 },
+      { kind: "flowers", density: 0.9 }, { kind: "glowmush", density: 0.6 },
       { kind: "rocks", density: 0.4 }, { kind: "pebbles", density: 0.5 },
     ],
     decoration: "trees", ruinsChance: 0.85, isletsChance: 0.85,
@@ -334,9 +341,9 @@ const BIOMES: BiomeDef[] = [
     ruggedness: [0.0, 0.2], seaChance: 1, sunIntensity: [1.05, 1.25],
     flowerHues: [50, 0, 320, 190],
     layers: [
-      { kind: "palms", density: 1.1 }, { kind: "tufts", density: 0.9 },
-      { kind: "flowers", density: 0.7 }, { kind: "rocks", density: 0.5 },
-      { kind: "reeds", density: 1.0 },
+      { kind: "palms", density: 1.0 }, { kind: "shells", density: 1.0 },
+      { kind: "buoys", density: 0.7 }, { kind: "reeds", density: 1.0 },
+      { kind: "tufts", density: 0.7 }, { kind: "flowers", density: 0.5 },
     ],
     decoration: "palms", ruinsChance: 0.6, isletsChance: 0.8,
     ringChance: 0.25, moonChance: 0.7, moonMax: 2, twoStarChance: 0.15, spaceChance: 0,
@@ -351,8 +358,8 @@ const BIOMES: BiomeDef[] = [
     flowerHues: [30, 20],
     layers: [
       { kind: "craters", density: 1.2 }, { kind: "rocks", density: 1.4 },
-      { kind: "pebbles", density: 1.2 }, { kind: "spires", density: 0.5 },
-      { kind: "crystals", density: 0.4 },
+      { kind: "cairns", density: 0.7 }, { kind: "pebbles", density: 1.2 },
+      { kind: "spires", density: 0.5 }, { kind: "crystals", density: 0.4 },
     ],
     decoration: "crystals", ruinsChance: 0.7, isletsChance: 0.95,
     ringChance: 0.7, moonChance: 0.9, moonMax: 3, twoStarChance: 0.5, spaceChance: 1,
@@ -366,9 +373,9 @@ const BIOMES: BiomeDef[] = [
     ruggedness: [0.0, 0.25], seaChance: 0.4, sunIntensity: [0.95, 1.15],
     flowerHues: [45, 0, 320, 200],
     layers: [
-      { kind: "houses", density: 1.3 }, { kind: "lamps", density: 0.9 },
-      { kind: "tufts", density: 1.0 }, { kind: "flowers", density: 0.8 },
-      { kind: "trees", density: 0.5 }, { kind: "pebbles", density: 0.5 },
+      { kind: "houses", density: 1.2 }, { kind: "lamps", density: 0.9 },
+      { kind: "stalls", density: 0.7 }, { kind: "tufts", density: 0.9 },
+      { kind: "flowers", density: 0.7 }, { kind: "trees", density: 0.5 },
     ],
     decoration: "houses", ruinsChance: 0.5, isletsChance: 0.85,
     ringChance: 0.3, moonChance: 0.8, moonMax: 2, twoStarChance: 0.2, spaceChance: 0.25,
@@ -382,9 +389,9 @@ const BIOMES: BiomeDef[] = [
     ruggedness: [0.3, 0.7], seaChance: 0.1, sunIntensity: [0.9, 1.1],
     flowerHues: [175, 300, 200],
     layers: [
-      { kind: "panels", density: 1.1 }, { kind: "gears", density: 1.0 },
-      { kind: "lamps", density: 1.0 }, { kind: "rocks", density: 0.7 },
-      { kind: "spires", density: 0.6 },
+      { kind: "panels", density: 0.9 }, { kind: "robots", density: 0.9 },
+      { kind: "antennas", density: 0.8 }, { kind: "gears", density: 0.8 },
+      { kind: "lamps", density: 0.9 }, { kind: "rocks", density: 0.6 },
     ],
     decoration: "panels", ruinsChance: 0.6, isletsChance: 0.95,
     ringChance: 0.6, moonChance: 0.8, moonMax: 3, twoStarChance: 0.45, spaceChance: 1,

@@ -167,6 +167,49 @@ function crater(): THREE.BufferGeometry {
   return g;
 }
 
+// A boxy little robot: body, head, legs, arms and an antenna, merged.
+function robot(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const body = new THREE.BoxGeometry(0.42, 0.46, 0.32);
+  body.translate(0, 0.5, 0);
+  parts.push(body);
+  const head = new THREE.BoxGeometry(0.3, 0.28, 0.3);
+  head.translate(0, 0.87, 0);
+  parts.push(head);
+  const legL = new THREE.BoxGeometry(0.13, 0.3, 0.13);
+  legL.translate(-0.12, 0.15, 0);
+  parts.push(legL);
+  const legR = new THREE.BoxGeometry(0.13, 0.3, 0.13);
+  legR.translate(0.12, 0.15, 0);
+  parts.push(legR);
+  const armL = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+  armL.translate(-0.3, 0.52, 0);
+  parts.push(armL);
+  const armR = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+  armR.translate(0.3, 0.52, 0);
+  parts.push(armR);
+  const ant = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 5);
+  ant.translate(0, 1.1, 0);
+  parts.push(ant);
+  return mergeGeometries(parts, false) ?? body;
+}
+
+// A stack of three balanced stones.
+function cairn(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const sizes = [0.26, 0.2, 0.14];
+  let y = 0;
+  for (const s of sizes) {
+    const r = new THREE.DodecahedronGeometry(s, 0);
+    y += s;
+    r.translate(0, y, 0);
+    r.scale(1, 0.8, 1);
+    y += s * 0.65;
+    parts.push(r);
+  }
+  return mergeGeometries(parts, false) ?? parts[0];
+}
+
 // ---------------------------------------------------------------------------
 
 export function Decorations({
@@ -224,21 +267,34 @@ export function Decorations({
       panelBase: new THREE.BoxGeometry(0.4, 0.3, 0.4),
       panelFace: new THREE.BoxGeometry(0.78, 0.78, 0.07),
       craterGeo: crater(),
+      // signature props
+      robotGeo: robot(),
+      robotEye: new THREE.BoxGeometry(0.16, 0.07, 0.04),
+      antMast: new THREE.CylinderGeometry(0.04, 0.06, 1.6, 6),
+      antDish: new THREE.SphereGeometry(0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      cairnGeo: cairn(),
+      shellGeo: new THREE.ConeGeometry(0.16, 0.32, 7),
+      buoyGeo: new THREE.ConeGeometry(0.18, 0.4, 8),
+      buoyLight: new THREE.IcosahedronGeometry(0.1, 0),
+      stallBase: new THREE.BoxGeometry(0.6, 0.1, 0.5),
+      stallAwning: new THREE.BoxGeometry(0.7, 0.08, 0.6),
+      stallPost: new THREE.CylinderGeometry(0.04, 0.04, 0.5, 5),
     };
   }, [th.seed]);
 
   // distinct scatter set per layer so they don't all share the same spots
-  const ptsFor = (kind: DecoKind, density: number) =>
+  const ptsFor = (kind: DecoKind, density: number, landOnly = true) =>
     planet.scatter(
       Math.max(4, Math.round((coverCount[kind] ?? base) * density)),
       mixSeed(th.seed, kind.charCodeAt(0) * 131 + kind.length * 17),
-      true,
+      landOnly,
     );
 
   const nodes: ReactNode[] = [];
 
   for (const layer of th.layers) {
-    const pts = ptsFor(layer.kind, layer.density);
+    // buoys float on the water; everything else sticks to land
+    const pts = ptsFor(layer.kind, layer.density, layer.kind !== "buoys");
     switch (layer.kind) {
       case "tufts":
         nodes.push(
@@ -727,6 +783,189 @@ export function Decorations({
             cast={false}
             geometry={assets.craterGeo}
             material={new THREE.MeshStandardMaterial({ color: th.rockColor, roughness: 1, flatShading: true })}
+          />,
+        );
+        break;
+      case "robots":
+        nodes.push(
+          <InstancedProp
+            key="robot-body"
+            points={pts}
+            seed={1818}
+            scaleMin={0.7}
+            scaleMax={1.3}
+            baseLift={0.0}
+            sink={0.05}
+            geometry={assets.robotGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.5, metalness: 0.6, flatShading: true })}
+          />,
+          <InstancedProp
+            key="robot-eye"
+            points={pts}
+            seed={1818}
+            scaleMin={0.7}
+            scaleMax={1.3}
+            baseLift={0.62}
+            cast={false}
+            geometry={assets.robotEye}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, emissive: th.accent, emissiveIntensity: 1.4, roughness: 0.4 })}
+          />,
+        );
+        break;
+      case "antennas":
+        nodes.push(
+          <InstancedProp
+            key="ant-mast"
+            points={pts}
+            seed={1919}
+            scaleMin={0.8}
+            scaleMax={1.8}
+            baseLift={0.8}
+            sink={0.05}
+            geometry={assets.antMast}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.5, metalness: 0.6, flatShading: true })}
+          />,
+          <InstancedProp
+            key="ant-dish"
+            points={pts}
+            seed={1919}
+            scaleMin={0.8}
+            scaleMax={1.8}
+            baseLift={1.55}
+            geometry={assets.antDish}
+            material={new THREE.MeshStandardMaterial({ color: th.structureColor, roughness: 0.6, metalness: 0.4, flatShading: true })}
+          />,
+          <InstancedProp
+            key="ant-light"
+            points={pts}
+            seed={1919}
+            scaleMin={0.8}
+            scaleMax={1.8}
+            baseLift={1.62}
+            cast={false}
+            geometry={assets.buoyLight}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, emissive: th.accent, emissiveIntensity: 1.6, roughness: 0.4 })}
+          />,
+        );
+        break;
+      case "cairns":
+        nodes.push(
+          <InstancedProp
+            key="cairns"
+            points={pts}
+            seed={2020}
+            scaleMin={0.8}
+            scaleMax={1.7}
+            baseLift={0.0}
+            sink={0.08}
+            geometry={assets.cairnGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.rockColor, roughness: 1, flatShading: true })}
+          />,
+        );
+        break;
+      case "shells":
+        nodes.push(
+          <InstancedProp
+            key="shells"
+            points={pts}
+            seed={2121}
+            scaleMin={0.6}
+            scaleMax={1.3}
+            baseLift={0.12}
+            sink={0.06}
+            lean={0.7}
+            cast={false}
+            geometry={assets.shellGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.5, flatShading: true })}
+          />,
+        );
+        break;
+      case "buoys":
+        nodes.push(
+          <InstancedProp
+            key="buoy-body"
+            points={pts}
+            seed={2222}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.18}
+            sink={0.0}
+            geometry={assets.buoyGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.6, flatShading: true })}
+          />,
+          <InstancedProp
+            key="buoy-light"
+            points={pts}
+            seed={2222}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.48}
+            cast={false}
+            geometry={assets.buoyLight}
+            material={new THREE.MeshStandardMaterial({ color: th.accent2, emissive: th.accent2, emissiveIntensity: 1.3, roughness: 0.4 })}
+          />,
+        );
+        break;
+      case "glowmush":
+        nodes.push(
+          <InstancedProp
+            key="glow-stem"
+            points={pts}
+            seed={2323}
+            scaleMin={0.7}
+            scaleMax={1.4}
+            baseLift={0.25}
+            sink={0.05}
+            geometry={assets.stemGeo}
+            material={new THREE.MeshStandardMaterial({ color: "#f3ecff", roughness: 0.8 })}
+          />,
+          <InstancedProp
+            key="glow-cap"
+            points={pts}
+            seed={2323}
+            scaleMin={0.7}
+            scaleMax={1.4}
+            baseLift={0.5}
+            cast={false}
+            geometry={assets.capGeo}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, emissive: th.accent, emissiveIntensity: 1.2, roughness: 0.5, flatShading: true })}
+          />,
+        );
+        break;
+      case "stalls":
+        nodes.push(
+          <InstancedProp
+            key="stall-base"
+            points={pts}
+            seed={2424}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.1}
+            sink={0.04}
+            geometry={assets.stallBase}
+            material={new THREE.MeshStandardMaterial({ color: "#b98a5e", roughness: 0.9, flatShading: true })}
+          />,
+          <InstancedProp
+            key="stall-post"
+            points={pts}
+            seed={2424}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.45}
+            cast={false}
+            geometry={assets.stallPost}
+            material={new THREE.MeshStandardMaterial({ color: "#9a6f49", roughness: 0.9, flatShading: true })}
+          />,
+          <InstancedProp
+            key="stall-awning"
+            points={pts}
+            seed={2424}
+            scaleMin={0.8}
+            scaleMax={1.4}
+            baseLift={0.72}
+            lean={0.06}
+            geometry={assets.stallAwning}
+            material={new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.7, flatShading: true })}
           />,
         );
         break;
