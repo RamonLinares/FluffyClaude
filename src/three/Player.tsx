@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { store } from "../game/store";
 import { getMove, inputState, consumeJump } from "../game/input";
 import { compass } from "../game/compass";
+import { getColliders } from "../game/colliders";
 import { COLLECT_RADIUS } from "../game/quests";
 import { audio } from "../game/audio";
 import { Fluffball } from "./Fluffball";
@@ -12,6 +13,8 @@ const SPEED = 4.4; // world units / second
 const REST_LIFT = 0.46;
 const JUMP_V0 = 9; // initial jump speed (units/s along the surface normal)
 const GRAVITY = 24; // pulls the jump back down
+const PLAYER_R = 0.5; // collision radius of the fluffball
+const MAX_PUSH = 0.25; // max push-out per collider per frame (smooth resolve)
 
 export function Player({
   quality,
@@ -51,6 +54,9 @@ export function Player({
       cTarget: new THREE.Vector3(),
       cTan: new THREE.Vector3(),
       cRight: new THREE.Vector3(),
+      colPos: new THREE.Vector3(),
+      colDelta: new THREE.Vector3(),
+      colTan: new THREE.Vector3(),
     }),
     [],
   );
@@ -238,6 +244,39 @@ export function Player({
         heading.current.applyQuaternion(s.q);
         bobPhase.current += dt * 9;
       }
+    }
+
+    // collision: push out of big scenery (trees, ruins, portals…). We resolve
+    // in the surface tangent plane and clamp the push per frame so deep overlaps
+    // (e.g. spawning next to a landmark) settle smoothly instead of snapping.
+    const cols = getColliders(planet.index);
+    if (cols.length) {
+      s.up.copy(ballDir.current).normalize();
+      let standR = planet.standRadius(s.up);
+      s.colPos.copy(s.up).multiplyScalar(standR);
+      for (let pass = 0; pass < 2; pass++) {
+        let pushed = false;
+        for (const c of cols) {
+          if (c.pos.distanceToSquared(s.colPos) > 9) continue; // broad phase
+          s.colDelta.copy(s.colPos).sub(c.pos);
+          const along = s.colDelta.dot(s.up);
+          s.colTan.copy(s.colDelta).addScaledVector(s.up, -along);
+          const dist = s.colTan.length();
+          const minD = c.radius + PLAYER_R;
+          if (dist < minD) {
+            const push = Math.min(minD - dist, MAX_PUSH);
+            if (dist > 1e-3) s.colTan.multiplyScalar(push / dist);
+            else s.colTan.copy(s.moveDir).multiplyScalar(-push);
+            s.colPos.add(s.colTan);
+            s.up.copy(s.colPos).normalize();
+            standR = planet.standRadius(s.up);
+            s.colPos.copy(s.up).multiplyScalar(standR);
+            pushed = true;
+          }
+        }
+        if (!pushed) break;
+      }
+      ballDir.current.copy(s.colPos).normalize();
     }
 
     // keep heading tangent to the (new) surface

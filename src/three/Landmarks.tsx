@@ -1,9 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Planet } from "../game/planet";
 import { PlanetTheme } from "../game/theme";
 import { Rng, mixSeed } from "../game/rng";
+import { addColliders, Collider } from "../game/colliders";
 import { Portal } from "./Portal";
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -527,15 +528,49 @@ const HERO_SETS: Record<string, (HeroKind | "portal")[]> = {
   Machina: ["antenna", "factory", "portal", "signpost"],
 };
 
+// Collision footprint per hero kind (signpost is small enough to walk past).
+const HERO_RADIUS: Record<HeroKind | "portal", number> = {
+  arch: 0.9,
+  dais: 1.8,
+  signpost: 0,
+  giantTree: 0.9,
+  rootArch: 0.9,
+  lighthouse: 0.85,
+  pier: 1.0,
+  windmill: 0.85,
+  townGate: 0.9,
+  observatory: 1.4,
+  caveMouth: 1.5,
+  prism: 1.0,
+  antenna: 0.6,
+  factory: 1.4,
+  portal: 1.5,
+};
+
 export function Landmarks({ planet }: { planet: Planet }) {
   const th = planet.theme;
   const spots = useMemo(
     () => planet.scatter(6, mixSeed(th.seed, 0x1a2d), true),
     [planet, th.seed],
   );
-  if (!th.hasRuins || spots.length < 4) return null;
+  const hasRuins = th.hasRuins && spots.length >= 4;
+  const set = hasRuins ? HERO_SETS[th.biome] ?? HERO_SETS.Meadow : [];
 
-  const set = HERO_SETS[th.biome] ?? HERO_SETS.Meadow;
+  // register hero colliders for this world (runs once per planet on mount)
+  const colliders = useMemo<Collider[]>(() => {
+    const list: Collider[] = [];
+    set.forEach((kind, i) => {
+      const r = HERO_RADIUS[kind] ?? 1.0;
+      if (r <= 0) return;
+      const dir = spots[i % spots.length].dir;
+      list.push({ pos: dir.clone().multiplyScalar(planet.standRadius(dir)), radius: r });
+    });
+    return list;
+  }, [planet, set, spots]);
+  useEffect(() => addColliders(planet.index, colliders), [planet.index, colliders]);
+
+  if (!hasRuins) return null;
+
   const yawFor = (i: number) =>
     new Rng(mixSeed(th.seed, i * 977 + 13)).range(0, Math.PI * 2);
 

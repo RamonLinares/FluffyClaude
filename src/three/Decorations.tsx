@@ -1,9 +1,25 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { Planet, ScatterPoint } from "../game/planet";
 import { DecoKind } from "../game/theme";
 import { Rng, mixSeed } from "../game/rng";
+import { addColliders, Collider } from "../game/colliders";
+
+// Footprint radius for the big prop kinds the player should bump into. Kinds not
+// listed here (flowers, tufts, pebbles, rocks, lamps…) are walk-through.
+const COLLIDE_RADIUS: Partial<Record<DecoKind, number>> = {
+  trees: 0.5,
+  pines: 0.45,
+  palms: 0.4,
+  spires: 0.36,
+  houses: 0.62,
+  robots: 0.36,
+  antennas: 0.32,
+  panels: 0.46,
+  stalls: 0.46,
+  crystals: 0.44,
+};
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -291,10 +307,13 @@ export function Decorations({
     );
 
   const nodes: ReactNode[] = [];
+  const colliders: Collider[] = [];
 
   for (const layer of th.layers) {
     // buoys float on the water; everything else sticks to land
     const pts = ptsFor(layer.kind, layer.density, layer.kind !== "buoys");
+    const cr = COLLIDE_RADIUS[layer.kind];
+    if (cr) for (const p of pts) colliders.push({ pos: p.pos, radius: cr });
     switch (layer.kind) {
       case "tufts":
         nodes.push(
@@ -971,6 +990,10 @@ export function Decorations({
         break;
     }
   }
+
+  // register this world's big-prop colliders (runs once per planet on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => addColliders(planet.index, colliders), [planet.index, quality]);
 
   return <group>{nodes}</group>;
 }
