@@ -575,3 +575,54 @@ input.code-input:focus {
     display: none;
   }
 }
+
+/* ---------- compass (points to nearest item) ---------- */
+.compass {
+  position: fixed;
+  right: 16px;
+  top: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 25;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.compass-dial {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.compass-rot {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.12s linear;
+}
+.compass-arrow {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  font-size: 19px;
+  transform: translateX(-50%) rotate(-45deg);
+  filter: drop-shadow(0 1px 2px rgba(60, 50, 80, 0.3));
+}
+.compass-icon {
+  font-size: 14px;
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 1px rgba(60, 50, 80, 0.25));
+}
+.compass-dist {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  padding: 1px 9px;
+  border-radius: 10px;
+  min-height: 16px;
+}

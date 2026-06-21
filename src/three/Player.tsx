@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { store } from "../game/store";
 import { getMove, inputState, consumeJump } from "../game/input";
+import { compass } from "../game/compass";
 import { COLLECT_RADIUS } from "../game/quests";
 import { audio } from "../game/audio";
 import { Fluffball } from "./Fluffball";
@@ -47,6 +48,9 @@ export function Player({
       yawQuat: new THREE.Quaternion(),
       faceTarget: new THREE.Vector3(),
       visualFwd: new THREE.Vector3(),
+      cTarget: new THREE.Vector3(),
+      cTan: new THREE.Vector3(),
+      cRight: new THREE.Vector3(),
     }),
     [],
   );
@@ -308,17 +312,48 @@ export function Player({
     s.lookAt.copy(s.worldPos).addScaledVector(s.up, 0.6);
     camera.lookAt(s.lookAt);
 
-    // collect markers
-    if (moving) {
-      for (const quest of store.quests) {
-        if (quest.done) continue;
-        for (const t of quest.targets) {
-          if (t.collected) continue;
-          if (s.worldPos.distanceTo(t.pos) < COLLECT_RADIUS) {
-            store.collect(quest, t);
-          }
+    // collect markers + find the nearest uncollected item for the compass
+    let bestQuest: (typeof store.quests)[number] | null = null;
+    let bestTarget: (typeof store.quests)[number]["targets"][number] | null =
+      null;
+    let bestD = Infinity;
+    for (const quest of store.quests) {
+      if (quest.done) continue;
+      for (const t of quest.targets) {
+        if (t.collected) continue;
+        const d = s.worldPos.distanceToSquared(t.pos);
+        if (d < bestD) {
+          bestD = d;
+          bestQuest = quest;
+          bestTarget = t;
+        }
+        if (moving && d < COLLECT_RADIUS * COLLECT_RADIUS) {
+          store.collect(quest, t);
         }
       }
+    }
+
+    if (bestQuest && bestTarget) {
+      // tangent direction along the surface from the player toward the target
+      s.cTarget.copy(bestTarget.pos).normalize();
+      s.cTan
+        .copy(s.cTarget)
+        .addScaledVector(s.up, -s.cTarget.dot(s.up));
+      if (s.cTan.lengthSq() > 1e-6) {
+        s.cTan.normalize();
+        s.cRight.copy(s.camDir).cross(s.up).normalize();
+        const fwd = s.cTan.dot(s.camDir);
+        const rightc = s.cTan.dot(s.cRight);
+        compass.angle = (Math.atan2(rightc, fwd) * 180) / Math.PI;
+        compass.distance = Math.sqrt(bestD);
+        compass.color = bestQuest.color;
+        compass.icon = bestQuest.icon;
+        compass.visible = true;
+      } else {
+        compass.visible = false;
+      }
+    } else {
+      compass.visible = false;
     }
   });
 
