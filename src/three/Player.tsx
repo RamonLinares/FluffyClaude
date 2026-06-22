@@ -11,10 +11,13 @@ import { Fluffball } from "./Fluffball";
 
 const SPEED = 4.4; // world units / second
 const REST_LIFT = 0.46;
-const JUMP_V0 = 9; // initial jump speed (units/s along the surface normal)
-const GRAVITY = 24; // pulls the jump back down
+const JUMP_V0 = 12.5; // initial jump speed (units/s along the surface normal)
+const GRAVITY = 22; // pulls the jump back down
 const PLAYER_R = 0.5; // collision radius of the fluffball
 const MAX_PUSH = 0.25; // max push-out per collider per frame (smooth resolve)
+// Above this jump height the ball clears ground clutter, so we stop colliding
+// with scenery — lets a jump pop you up and out of a cluster of trees.
+const JUMP_CLEAR = 0.9;
 
 export function Player({
   quality,
@@ -250,7 +253,7 @@ export function Player({
     // in the surface tangent plane and clamp the push per frame so deep overlaps
     // (e.g. spawning next to a landmark) settle smoothly instead of snapping.
     const cols = getColliders(planet.index);
-    if (cols.length) {
+    if (cols.length && jumpOffset.current < JUMP_CLEAR) {
       s.up.copy(ballDir.current).normalize();
       let standR = planet.standRadius(s.up);
       s.colPos.copy(s.up).multiplyScalar(standR);
