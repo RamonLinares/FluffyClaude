@@ -15,12 +15,18 @@ const MOSS = "#9fc27a";
 const WOOD = "#b98a5e";
 const WOOD_DARK = "#9a6f49";
 
+function makeSurfaceQuat(dir: THREE.Vector3, yaw: number) {
+  const qDir = new THREE.Quaternion().setFromUnitVectors(UP, dir);
+  const qYaw = new THREE.Quaternion().setFromAxisAngle(dir, yaw);
+  return qYaw.multiply(qDir);
+}
 function useSurfaceQuat(dir: THREE.Vector3, yaw: number) {
-  return useMemo(() => {
-    const qDir = new THREE.Quaternion().setFromUnitVectors(UP, dir);
-    const qYaw = new THREE.Quaternion().setFromAxisAngle(dir, yaw);
-    return qYaw.multiply(qDir);
-  }, [dir, yaw]);
+  return useMemo(() => makeSurfaceQuat(dir, yaw), [dir, yaw]);
+}
+
+// Yaw must match what Landmarks() uses to place each hero, so colliders line up.
+function heroYaw(seed: number, i: number) {
+  return new Rng(mixSeed(seed, i * 977 + 13)).range(0, Math.PI * 2);
 }
 
 interface HeroProps {
@@ -528,23 +534,30 @@ const HERO_SETS: Record<string, (HeroKind | "portal")[]> = {
   Machina: ["antenna", "factory", "portal", "signpost"],
 };
 
-// Collision footprint per hero kind (signpost is small enough to walk past).
-const HERO_RADIUS: Record<HeroKind | "portal", number> = {
-  arch: 0.9,
-  dais: 1.8,
-  signpost: 0,
-  giantTree: 0.9,
-  rootArch: 0.9,
-  lighthouse: 0.85,
-  pier: 1.0,
-  windmill: 0.85,
-  townGate: 0.9,
-  observatory: 1.4,
-  caveMouth: 1.5,
-  prism: 1.0,
-  antenna: 0.6,
-  factory: 1.4,
-  portal: 1.5,
+// Collision footprint per hero kind, as local [x, z, radius] discs in the
+// structure's own frame (x/z are ground axes; y is up). Multiple discs trace
+// the actual solid parts — so arches/gates have two leg colliders you can walk
+// BETWEEN, and the portal is a row of discs forming its ring wall (you go
+// around the ends). Empty = walk-through (signpost).
+const HERO_FOOTPRINT: Record<HeroKind | "portal", [number, number, number][]> = {
+  signpost: [],
+  arch: [[-0.95, 0, 0.42], [0.95, 0, 0.42]],
+  rootArch: [[-1.0, 0, 0.45], [1.0, 0, 0.45]],
+  townGate: [[-1.3, 0, 0.55], [1.3, 0, 0.55]],
+  portal: [
+    [-1.5, 0, 0.55], [-0.75, 0, 0.55], [0, 0, 0.55],
+    [0.75, 0, 0.55], [1.5, 0, 0.55],
+  ],
+  caveMouth: [[-1.4, 0, 0.55], [1.4, 0, 0.55]],
+  dais: [[0, 0, 1.8]],
+  observatory: [[0, 0, 1.35]],
+  factory: [[-0.7, 0, 0.85], [0.7, 0, 0.85]],
+  lighthouse: [[0, 0, 0.78]],
+  pier: [[0, 0.4, 0.6], [0, 1.6, 0.6], [0, 2.6, 0.6]],
+  windmill: [[0, 0, 0.78]],
+  giantTree: [[0, 0, 0.82]],
+  prism: [[0, 0, 0.95]],
+  antenna: [[0, 0, 0.5]],
 };
 
 export function Landmarks({ planet }: { planet: Planet }) {
@@ -556,23 +569,35 @@ export function Landmarks({ planet }: { planet: Planet }) {
   const hasRuins = th.hasRuins && spots.length >= 4;
   const set = hasRuins ? HERO_SETS[th.biome] ?? HERO_SETS.Meadow : [];
 
-  // register hero colliders for this world (runs once per planet on mount)
+  // register hero colliders for this world (runs once per planet on mount).
+  // Each footprint disc is transformed from the structure's local frame onto
+  // the sphere surface so the colliders match what's actually drawn.
   const colliders = useMemo<Collider[]>(() => {
     const list: Collider[] = [];
+    const off = new THREE.Vector3();
+    const world = new THREE.Vector3();
     set.forEach((kind, i) => {
-      const r = HERO_RADIUS[kind] ?? 1.0;
-      if (r <= 0) return;
+      const fp = HERO_FOOTPRINT[kind] ?? [[0, 0, 1.0]];
+      if (!fp.length) return;
       const dir = spots[i % spots.length].dir;
-      list.push({ pos: dir.clone().multiplyScalar(planet.standRadius(dir)), radius: r });
+      const q = makeSurfaceQuat(dir, heroYaw(th.seed, i));
+      const base = planet.standRadius(dir);
+      for (const [lx, lz, r] of fp) {
+        off.set(lx, 0, lz).applyQuaternion(q); // tangent offset
+        world.copy(dir).multiplyScalar(base).add(off).normalize();
+        list.push({
+          pos: world.clone().multiplyScalar(planet.standRadius(world)),
+          radius: r,
+        });
+      }
     });
     return list;
-  }, [planet, set, spots]);
+  }, [planet, set, spots, th.seed]);
   useEffect(() => addColliders(planet.index, colliders), [planet.index, colliders]);
 
   if (!hasRuins) return null;
 
-  const yawFor = (i: number) =>
-    new Rng(mixSeed(th.seed, i * 977 + 13)).range(0, Math.PI * 2);
+  const yawFor = (i: number) => heroYaw(th.seed, i);
 
   return (
     <group>
