@@ -7,19 +7,24 @@ import { Rng, mixSeed } from "../game/rng";
 import { addColliders, Collider } from "../game/colliders";
 
 // Footprint radius for the big prop kinds the player should bump into. Kinds not
-// listed here (flowers, tufts, pebbles, rocks, lamps…) are walk-through.
+// listed here (flowers, tufts, pebbles, rocks, lamps…) are walk-through. Kept
+// fairly small so you can weave between obstacles.
 const COLLIDE_RADIUS: Partial<Record<DecoKind, number>> = {
-  trees: 0.5,
-  pines: 0.45,
-  palms: 0.4,
-  spires: 0.36,
-  houses: 0.62,
-  robots: 0.36,
-  antennas: 0.32,
-  panels: 0.46,
-  stalls: 0.46,
-  crystals: 0.44,
+  trees: 0.42,
+  pines: 0.38,
+  palms: 0.34,
+  spires: 0.3,
+  houses: 0.55,
+  robots: 0.3,
+  antennas: 0.28,
+  panels: 0.4,
+  stalls: 0.4,
+  crystals: 0.36,
 };
+
+// Collidable props are thinned out vs. the lush (walk-through) ground cover, so
+// every world keeps clear lanes to move through.
+const COLLIDE_COUNT_SCALE = 0.55;
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -238,7 +243,7 @@ export function Decorations({
   const th = planet.theme;
   const hi = quality === "high";
   // base count per "1.0 density" layer for props (trees, crystals, mushrooms…)
-  const base = Math.round((hi ? 190 : 120) * th.decoDensity);
+  const base = Math.round((hi ? 120 : 78) * th.decoDensity);
   // Ground cover (grass/flowers/pebbles) needs to be FAR denser than props to
   // read as a carpet. These layers are cheap (no shadows, tiny instanced geo),
   // so they get a big dedicated budget instead of the prop `base`.
@@ -298,13 +303,16 @@ export function Decorations({
     };
   }, [th.seed]);
 
-  // distinct scatter set per layer so they don't all share the same spots
-  const ptsFor = (kind: DecoKind, density: number, landOnly = true) =>
-    planet.scatter(
-      Math.max(4, Math.round((coverCount[kind] ?? base) * density)),
+  // distinct scatter set per layer so they don't all share the same spots.
+  // Collidable kinds are thinned (COLLIDE_COUNT_SCALE) to keep lanes open.
+  const ptsFor = (kind: DecoKind, density: number, landOnly = true) => {
+    const scale = COLLIDE_RADIUS[kind] ? COLLIDE_COUNT_SCALE : 1;
+    return planet.scatter(
+      Math.max(4, Math.round((coverCount[kind] ?? base) * density * scale)),
       mixSeed(th.seed, kind.charCodeAt(0) * 131 + kind.length * 17),
       landOnly,
     );
+  };
 
   const nodes: ReactNode[] = [];
   const colliders: Collider[] = [];
